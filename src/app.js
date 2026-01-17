@@ -95,7 +95,7 @@ app.get('/health/ready', async (req, res) => {
 });
 
 // Sentry test route
-app.get("/debug-sentry", function mainHandler(req, res) {
+app.get("/debug-sentry", function mainHandler(_req, _res) {
   throw new Error("My first Sentry error!");
 });
 
