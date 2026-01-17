@@ -1,0 +1,5 @@
+{
+  "watch": ["src"],
+  "ext": "js",
+  "exec": "node --import ./src/instrument.js src/server.js"
+}
