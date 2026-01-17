@@ -61,7 +61,7 @@ app.get('/health', (req, res) => {
 });
 
 // Deep health check - verifies database connectivity
-app.get('/health/ready', async (req, res) => {
+app.get('/health/ready', async (_req, res) => {
   try {
     const { supabaseService, supabaseAnon } = getSupabaseClients();
     const db = supabaseService || supabaseAnon;
