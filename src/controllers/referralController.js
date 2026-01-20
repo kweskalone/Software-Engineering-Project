@@ -152,54 +152,65 @@ async function getReferral(req, res, next) {
  * Accept a referral (receiving hospital).
  * Only the TO hospital can accept.
  * Status: pending → accepted
+ * 
+ * NEW: When accepting, a bed is reserved temporarily (default 2 hours).
+ * This prevents double-booking while the patient is being transferred.
  */
 async function acceptReferral(req, res, next) {
   try {
     const referralId = req.params.id;
+    const { ward_id, reservation_hours } = req.body || {};
     const { supabaseService, supabaseAnon } = getSupabaseClients();
     const db = supabaseService || supabaseAnon;
 
-    // Fetch the referral first
-    const { data: referral, error: fetchError } = await db
-      .from('referrals')
-      .select('id, status, to_hospital_id, from_hospital_id, patient_id')
-      .eq('id', referralId)
-      .single();
-
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        return res.status(404).json({ error: 'Referral not found' });
-      }
-      fetchError.statusCode = 500;
-      fetchError.publicMessage = 'Failed to load referral';
-      throw fetchError;
-    }
-
-    // Only the receiving hospital can accept
-    if (referral.to_hospital_id !== req.auth.hospitalId) {
-      return res.status(403).json({ error: 'Only the receiving hospital can accept this referral' });
-    }
-
-    // Check current status (must be pending)
-    if (referral.status !== 'pending') {
-      return res.status(409).json({ 
-        error: `Cannot accept referral with status '${referral.status}'`,
-        current_status: referral.status
+    // Ward ID is now required - must specify where the patient will go
+    if (!ward_id) {
+      return res.status(400).json({ 
+        error: 'ward_id is required to accept a referral',
+        hint: 'Specify which ward will receive the patient so a bed can be reserved'
       });
     }
 
-    // Update status to accepted
-    const { data: updated, error: updateError } = await db
-      .from('referrals')
-      .update({ status: 'accepted' })
-      .eq('id', referralId)
-      .select('id, status, patient_id, from_hospital_id, to_hospital_id, reason, created_at')
-      .single();
+    // Use the RPC function to atomically reserve the bed
+    const { data: result, error: rpcError } = await db.rpc('reserve_bed_for_referral', {
+      p_referral_id: referralId,
+      p_ward_id: ward_id,
+      p_hospital_id: req.auth.hospitalId,
+      p_actor_auth_user_id: req.auth.user.id,
+      p_reservation_hours: reservation_hours || 2  // Default 2 hours
+    });
 
-    if (updateError) {
-      updateError.statusCode = 500;
-      updateError.publicMessage = 'Failed to accept referral';
-      throw updateError;
+    if (rpcError) {
+      const msg = (rpcError.message || '').toString();
+      
+      if (msg.includes('REFERRAL_NOT_FOUND')) {
+        return res.status(404).json({ error: 'Referral not found' });
+      }
+      if (msg.includes('REFERRAL_NOT_PENDING')) {
+        return res.status(409).json({ 
+          error: 'Referral is not in pending status',
+          hint: 'Only pending referrals can be accepted'
+        });
+      }
+      if (msg.includes('HOSPITAL_MISMATCH')) {
+        return res.status(403).json({ error: 'Only the receiving hospital can accept this referral' });
+      }
+      if (msg.includes('WARD_NOT_FOUND')) {
+        return res.status(404).json({ error: 'Ward not found' });
+      }
+      if (msg.includes('WARD_HOSPITAL_MISMATCH')) {
+        return res.status(403).json({ error: 'Ward does not belong to your hospital' });
+      }
+      if (msg.includes('NO_BEDS_AVAILABLE')) {
+        return res.status(409).json({ 
+          error: 'No beds available in the selected ward',
+          hint: 'All beds are either occupied or already reserved for other referrals'
+        });
+      }
+      
+      rpcError.statusCode = 500;
+      rpcError.publicMessage = 'Failed to accept referral';
+      throw rpcError;
     }
 
     await logAudit({
@@ -208,12 +219,20 @@ async function acceptReferral(req, res, next) {
       tableName: 'referrals',
       recordId: referralId,
       oldData: { status: 'pending' },
-      newData: { status: 'accepted' }
+      newData: { 
+        status: 'accepted',
+        reservation_id: result?.reservation?.id,
+        target_ward_id: ward_id
+      }
     });
 
     return res.status(200).json({ 
-      referral: updated,
-      message: 'Referral accepted. Patient can now be transferred.'
+      success: true,
+      message: 'Referral accepted and bed reserved',
+      referral: result?.referral,
+      reservation: result?.reservation,
+      ward: result?.ward,
+      hint: `Bed reserved until ${result?.reservation?.expires_at}. Complete the referral before then to admit the patient.`
     });
   } catch (err) {
     return next(err);
@@ -298,6 +317,8 @@ async function rejectReferral(req, res, next) {
  * Only the TO hospital can complete.
  * Status: accepted → completed
  * This also creates an admission at the receiving hospital.
+ * 
+ * NEW: Completes any active bed reservation and admits the patient.
  */
 async function completeReferral(req, res, next) {
   try {
@@ -306,15 +327,12 @@ async function completeReferral(req, res, next) {
     const { supabaseService, supabaseAnon } = getSupabaseClients();
     const db = supabaseService || supabaseAnon;
 
-    if (!ward_id) {
-      return res.status(400).json({ error: 'ward_id is required to admit the patient' });
-    }
-
-    // Fetch the referral
+    // Fetch the referral with reservation info
     const { data: referral, error: fetchError } = await db
       .from('referrals')
       .select(`
         id, status, to_hospital_id, from_hospital_id, patient_id,
+        reservation_id, target_ward_id,
         patients (id, full_name, sex, date_of_birth, phone, national_id)
       `)
       .eq('id', referralId)
@@ -342,11 +360,21 @@ async function completeReferral(req, res, next) {
       });
     }
 
+    // Use the reserved ward if no ward_id provided, otherwise use provided ward_id
+    const targetWardId = ward_id || referral.target_ward_id;
+    
+    if (!targetWardId) {
+      return res.status(400).json({ 
+        error: 'ward_id is required to admit the patient',
+        hint: 'Specify which ward will receive the patient'
+      });
+    }
+
     // Verify ward belongs to the receiving hospital
     const { data: ward, error: wardError } = await db
       .from('wards')
-      .select('id, hospital_id, available_beds')
-      .eq('id', ward_id)
+      .select('id, hospital_id, available_beds, reserved_beds')
+      .eq('id', targetWardId)
       .single();
 
     if (wardError) {
@@ -362,14 +390,30 @@ async function completeReferral(req, res, next) {
       return res.status(403).json({ error: 'Ward does not belong to your hospital' });
     }
 
-    if (ward.available_beds <= 0) {
-      return res.status(409).json({ error: 'No beds available in the selected ward' });
+    // Check bed availability - if using the reserved ward, the reservation holds the bed
+    const isUsingReservedWard = targetWardId === referral.target_ward_id && referral.reservation_id;
+    
+    if (!isUsingReservedWard && ward.available_beds <= (ward.reserved_beds || 0)) {
+      return res.status(409).json({ 
+        error: 'No beds available in the selected ward',
+        hint: 'All beds are either occupied or reserved. Use the originally reserved ward if available.'
+      });
+    }
+
+    // Complete the bed reservation if exists
+    if (referral.reservation_id) {
+      await db.rpc('complete_bed_reservation', {
+        p_referral_id: referralId,
+        p_ward_id: targetWardId,
+        p_actor_hospital_id: req.auth.hospitalId,
+        p_actor_auth_user_id: req.auth.user.id
+      });
     }
 
     // Create admission at receiving hospital using RPC
     const { data: admissionResult, error: admissionError } = await db.rpc('create_admission', {
       p_actor_hospital_id: req.auth.hospitalId,
-      p_ward_id: ward_id,
+      p_ward_id: targetWardId,
       p_patient_full_name: referral.patients.full_name,
       p_patient_sex: referral.patients.sex,
       p_patient_date_of_birth: referral.patients.date_of_birth,
@@ -412,6 +456,7 @@ async function completeReferral(req, res, next) {
     });
 
     return res.status(200).json({ 
+      success: true,
       referral: updatedReferral,
       admission: admissionResult?.admission,
       ward: admissionResult?.ward,
@@ -426,6 +471,8 @@ async function completeReferral(req, res, next) {
  * Cancel a referral (sender hospital).
  * Only the FROM hospital can cancel.
  * Status: pending|accepted|rejected → cancelled
+ * 
+ * NEW: If the referral has an active reservation, it will be released.
  */
 async function cancelReferral(req, res, next) {
   try {
@@ -433,10 +480,10 @@ async function cancelReferral(req, res, next) {
     const { supabaseService, supabaseAnon } = getSupabaseClients();
     const db = supabaseService || supabaseAnon;
 
-    // Fetch the referral first
+    // Fetch the referral first (including reservation info)
     const { data: referral, error: fetchError } = await db
       .from('referrals')
-      .select('id, status, from_hospital_id')
+      .select('id, status, from_hospital_id, reservation_id')
       .eq('id', referralId)
       .single();
 
@@ -470,10 +517,25 @@ async function cancelReferral(req, res, next) {
       });
     }
 
+    // Release any active bed reservation
+    let reservationReleased = false;
+    if (referral.reservation_id) {
+      const { data: releaseResult } = await db.rpc('release_bed_reservation', {
+        p_reservation_id: referral.reservation_id,
+        p_reason: 'cancelled'
+      });
+      reservationReleased = releaseResult?.success || false;
+    }
+
     // Update status to cancelled
     const { data: updated, error: updateError } = await db
       .from('referrals')
-      .update({ status: 'cancelled' })
+      .update({ 
+        status: 'cancelled',
+        reservation_id: null,
+        target_ward_id: null,
+        reservation_expires_at: null
+      })
       .eq('id', referralId)
       .select('id, status, patient_id, from_hospital_id, to_hospital_id, reason, created_at')
       .single();
@@ -489,13 +551,17 @@ async function cancelReferral(req, res, next) {
       action: 'referral.cancel',
       tableName: 'referrals',
       recordId: referralId,
-      oldData: { status: referral.status },
-      newData: { status: 'cancelled' }
+      oldData: { status: referral.status, reservation_id: referral.reservation_id },
+      newData: { status: 'cancelled', reservation_released: reservationReleased }
     });
 
     return res.status(200).json({ 
+      success: true,
       referral: updated,
-      message: 'Referral cancelled.'
+      reservation_released: reservationReleased,
+      message: reservationReleased 
+        ? 'Referral cancelled and reserved bed released.' 
+        : 'Referral cancelled.'
     });
   } catch (err) {
     return next(err);

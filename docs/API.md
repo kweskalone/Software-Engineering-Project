@@ -762,20 +762,61 @@ Updates `total_beds` safely and adjusts `available_beds` based on current occupa
 
 **Roles:** `admin`, `doctor`
 
-**Purpose:** Accept an incoming referral (receiving hospital only).
+**Purpose:** Accept an incoming referral and reserve a bed (receiving hospital only).
+
+**New Feature (2026-01-19):** When accepting a referral, a bed is temporarily reserved in the specified ward. This prevents double-booking while the patient is being transferred. The reservation expires after 2 hours by default.
+
+### Request
+
+```json
+{
+  "ward_id": "<ward-uuid>",
+  "reservation_hours": 2
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `ward_id` | uuid | ✅ | Ward where the patient will be admitted |
+| `reservation_hours` | int | ❌ | Hours to hold the bed (default: 2, max: 24) |
 
 ### 200 OK
 
 ```json
 {
   "success": true,
-  "message": "Referral accepted",
+  "message": "Referral accepted and bed reserved",
   "referral": {
     "id": "<referral-uuid>",
     "status": "accepted",
-    "accepted_at": "2026-01-16T10:00:00.000Z",
-    "accepted_by_auth_user_id": "<user-uuid>"
-  }
+    "target_ward_id": "<ward-uuid>"
+  },
+  "reservation": {
+    "id": "<reservation-uuid>",
+    "referral_id": "<referral-uuid>",
+    "ward_id": "<ward-uuid>",
+    "ward_name": "ICU",
+    "reserved_at": "2026-01-19T10:00:00.000Z",
+    "expires_at": "2026-01-19T12:00:00.000Z",
+    "hours_until_expiry": 2
+  },
+  "ward": {
+    "id": "<ward-uuid>",
+    "name": "ICU",
+    "available_beds": 5,
+    "reserved_beds": 1,
+    "effective_available": 4
+  },
+  "hint": "Bed reserved until 2026-01-19T12:00:00.000Z. Complete the referral before then to admit the patient."
+}
+```
+
+### 400 Bad Request
+
+```json
+{ 
+  "error": "ward_id is required to accept a referral",
+  "hint": "Specify which ward will receive the patient so a bed can be reserved"
 }
 ```
 
@@ -785,10 +826,22 @@ Updates `total_beds` safely and adjusts `available_beds` based on current occupa
 { "error": "Only the receiving hospital can accept this referral" }
 ```
 
-### 409 Conflict
+### 409 Conflict (no beds)
 
 ```json
-{ "error": "Referral is not in pending status" }
+{ 
+  "error": "No beds available in the selected ward",
+  "hint": "All beds are either occupied or already reserved for other referrals"
+}
+```
+
+### 409 Conflict (wrong status)
+
+```json
+{ 
+  "error": "Referral is not in pending status",
+  "hint": "Only pending referrals can be accepted"
+}
 ```
 
 ---
