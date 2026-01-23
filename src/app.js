@@ -27,7 +27,7 @@ import patientRoutes from './routes/patientRoutes.js';
 import bedRoutes from './routes/bedRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
-import notificationRoutes from './routes/notificationRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
 
 const app = express();
 
@@ -112,7 +112,7 @@ app.use('/patients', patientRoutes);
 app.use('/beds', bedRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/audit-logs', auditRoutes);
-app.use('/notifications', notificationRoutes);
+app.use('/contact', contactRoutes);
 
 // 404 and error handling middleware
 app.use(notFoundHandler);

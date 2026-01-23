@@ -1,7 +1,4 @@
-/**
- * Custom error class for application errors
- * Provides consistent error structure with status codes
- */
+// Custom error class for application errors
 class AppError extends Error {
   constructor(message, statusCode = 500, details = null) {
     super(message);

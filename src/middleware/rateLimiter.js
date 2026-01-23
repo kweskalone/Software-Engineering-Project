@@ -1,9 +1,6 @@
 import rateLimit from 'express-rate-limit';
 
-/**
- * Rate limiting middleware configuration.
- * Protects against brute-force attacks and API abuse.
- */
+// Rate limiting middleware configuration
 
 // General API rate limit - applies to all routes
 const generalLimiter = rateLimit({

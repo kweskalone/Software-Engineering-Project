@@ -1,10 +1,6 @@
 import * as Sentry from '@sentry/node';
 
-/**
- * Initialize Sentry error tracking and performance monitoring.
- * Note: For ESM modules, Sentry is initialized in instrument.js via --import flag.
- * This function provides a fallback and logs the status.
- */
+// Initialize Sentry error tracking and performance monitoring
 function initSentry() {
   const dsn = process.env.SENTRY_DSN;
 
@@ -43,19 +39,13 @@ function initSentry() {
   return true;
 }
 
-/**
- * Setup Sentry for Express app (call after creating express app)
- * For Sentry v8+, we use setupExpressErrorHandler
- */
+// Setup Sentry for Express app
 function setupSentryExpressErrorHandler(app) {
   if (!process.env.SENTRY_DSN) return;
   Sentry.setupExpressErrorHandler(app);
 }
 
-/**
- * Attach user context to Sentry for better error tracking.
- * Call this after user authentication.
- */
+// Attach user context to Sentry for better error tracking
 function setSentryUser(user) {
   if (!process.env.SENTRY_DSN) return;
   
@@ -68,33 +58,25 @@ function setSentryUser(user) {
   });
 }
 
-/**
- * Clear user context (e.g., on logout)
- */
+// Clear user context (e.g., on logout)
 function clearSentryUser() {
   if (!process.env.SENTRY_DSN) return;
   Sentry.setUser(null);
 }
 
-/**
- * Add custom context/tags to Sentry events
- */
+// Add custom context/tags to Sentry events
 function setSentryContext(name, context) {
   if (!process.env.SENTRY_DSN) return;
   Sentry.setContext(name, context);
 }
 
-/**
- * Capture a message manually
- */
+// Capture a message manually
 function captureMessage(message, level = 'info') {
   if (!process.env.SENTRY_DSN) return;
   Sentry.captureMessage(message, level);
 }
 
-/**
- * Capture an exception manually
- */
+// Capture an exception manually
 function captureException(error, context = {}) {
   if (!process.env.SENTRY_DSN) return;
   Sentry.captureException(error, { extra: context });

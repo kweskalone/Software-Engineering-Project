@@ -1,17 +1,7 @@
 import { getSupabaseClients } from '../config/supabaseClient.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 
-/**
- * Search for available beds across ALL hospitals.
- * This is the core feature that solves No Bed Syndrome.
- * 
- * Query params:
- * - region: Filter by hospital region
- * - district: Filter by hospital district
- * - ward_type: Filter by ward type (icu, maternity, general, etc.)
- * - min_beds: Minimum available beds (default: 1)
- * - page, limit: Pagination
- */
+// Search for available beds across ALL hospitals
 async function searchBeds(req, res, next) {
   try {
     const { supabaseService, supabaseAnon } = getSupabaseClients();

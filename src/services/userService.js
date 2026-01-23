@@ -3,9 +3,7 @@ import { logAudit } from './auditService.js';
 
 const ALLOWED_ROLES = new Set(['admin', 'doctor', 'nurse']);
 
-/**
- * List all users with pagination (admin only)
- */
+// List all users with pagination (admin only)
 async function listUsers({ actor, page = 1, limit = 20, role, hospitalId }) {
   if (actor?.role !== 'admin') {
     const err = new Error('Forbidden');
@@ -88,9 +86,7 @@ async function listUsers({ actor, page = 1, limit = 20, role, hospitalId }) {
   };
 }
 
-/**
- * Get a single user by ID (admin only)
- */
+// Get a single user by ID (admin only)
 async function getUserById({ actor, userId }) {
   if (actor?.role !== 'admin') {
     const err = new Error('Forbidden');
@@ -138,9 +134,7 @@ async function getUserById({ actor, userId }) {
   return user;
 }
 
-/**
- * Update a user (admin only)
- */
+// Update a user (admin only)
 async function updateUser({ actor, userId, updates }) {
   if (actor?.role !== 'admin') {
     const err = new Error('Forbidden');
@@ -228,9 +222,7 @@ async function updateUser({ actor, userId, updates }) {
   return getUserById({ actor, userId });
 }
 
-/**
- * Delete/deactivate a user (admin only)
- */
+// Delete/deactivate a user (admin only)
 async function deleteUser({ actor, userId }) {
   if (actor?.role !== 'admin') {
     const err = new Error('Forbidden');
@@ -279,44 +271,55 @@ async function deleteUser({ actor, userId }) {
   return { success: true, message: 'User deleted successfully' };
 }
 
-async function createUserWithProfile({ actor, email, password, role, hospitalId, staffId, firstName, lastName }) {
-  if (actor?.role !== 'admin') {
-    const err = new Error('Forbidden');
+async function createUserWithProfile({
+  actor,
+  email,
+  password,
+  role,
+  hospitalId,
+  staffId,
+  firstName,
+  lastName,
+}) {
+  if (actor?.role !== "admin") {
+    const err = new Error("Forbidden");
     err.statusCode = 403;
-    err.publicMessage = 'Forbidden';
+    err.publicMessage = "Forbidden";
     throw err;
   }
 
   if (!ALLOWED_ROLES.has(role)) {
-    const err = new Error('Invalid role');
+    const err = new Error("Invalid role");
     err.statusCode = 400;
-    err.publicMessage = 'role must be one of admin, doctor, nurse';
+    err.publicMessage = "role must be one of admin, doctor, nurse";
     throw err;
   }
 
   const { supabaseService } = getSupabaseClients();
   if (!supabaseService) {
-    const err = new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
+    const err = new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
     err.statusCode = 500;
-    err.publicMessage = 'Server is missing service role key for user provisioning';
+    err.publicMessage =
+      "Server is missing service role key for user provisioning";
     throw err;
   }
 
   // 1) Create Supabase Auth user
-  const { data: created, error: createError } = await supabaseService.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: {
-      first_name: firstName,
-      last_name: lastName,
-    },
-  });
+  const { data: created, error: createError } =
+    await supabaseService.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+      },
+    });
 
   if (createError || !created?.user) {
-    const err = createError || new Error('Failed to create auth user');
+    const err = createError || new Error("Failed to create auth user");
     err.statusCode = 500;
-    err.publicMessage = 'Failed to create user account';
+    err.publicMessage = "Failed to create user account";
     throw err;
   }
 
@@ -325,37 +328,41 @@ async function createUserWithProfile({ actor, email, password, role, hospitalId,
   try {
     // 2) Provision app-level profile (public.users)
     const { data: profile, error: profileError } = await supabaseService
-      .from('users')
+      .from("users")
       .insert({
         auth_user_id: authUserId,
         staff_id: staffId,
         role,
-        hospital_id: hospitalId
+        hospital_id: hospitalId,
+        first_name: firstName,
+        last_name: lastName,
       })
-      .select('id, auth_user_id, staff_id, role, hospital_id, created_at')
+      .select(
+        "id, auth_user_id, staff_id, role, hospital_id, created_at, first_name, last_name",
+      )
       .single();
 
     if (profileError) {
       const err = profileError;
       err.statusCode = 500;
-      err.publicMessage = 'Failed to provision user profile';
+      err.publicMessage = "Failed to provision user profile";
       throw err;
     }
 
     await logAudit({
       actor,
-      action: 'user.create',
-      tableName: 'users',
+      action: "user.create",
+      tableName: "users",
       recordId: profile?.id || null,
-      newData: profile
+      newData: profile,
     });
 
     return {
       auth_user: {
         id: authUserId,
-        email: created.user.email
+        email: created.user.email,
       },
-      profile
+      profile,
     };
   } catch (e) {
     // Best-effort cleanup: if profile insert fails, remove auth user

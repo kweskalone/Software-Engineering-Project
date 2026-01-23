@@ -84,6 +84,8 @@ create table if not exists users (
   staff_id text not null,
   role text not null check (role in ('admin','doctor','nurse')),
   hospital_id uuid not null references hospitals(id) on delete restrict,
+  first_name text,
+  last_name text,
   created_at timestamptz not null default now()
 );
 

@@ -1,10 +1,7 @@
 import { getSupabaseClients } from '../config/supabaseClient.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 
-/**
- * List patients.
- * Supports pagination and search by name or national_id.
- */
+// List patients with pagination and search support
 async function listPatients(req, res, next) {
   try {
     const { supabaseService, supabaseAnon } = getSupabaseClients();
@@ -58,9 +55,7 @@ async function listPatients(req, res, next) {
   }
 }
 
-/**
- * Get a single patient by ID, including their admission history.
- */
+// Get a single patient by ID, including their admission history
 async function getPatient(req, res, next) {
   try {
     const patientId = req.params.id;

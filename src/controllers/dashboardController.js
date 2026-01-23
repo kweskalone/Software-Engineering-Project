@@ -1,17 +1,7 @@
 import { supabase } from '../config/supabaseClient.js';
 import { AppError } from '../middleware/errorHandlers.js';
 
-/**
- * Get dashboard statistics for a hospital
- * GET /dashboard/stats
- * 
- * Returns key metrics:
- * - Total beds, occupied beds, available beds
- * - Occupancy rate percentage
- * - Today's admissions and discharges
- * - Pending incoming/outgoing referrals
- * - Ward breakdown
- */
+// Get dashboard statistics for a hospital
 export const getDashboardStats = async (req, res, next) => {
   try {
     const hospitalId = req.auth.hospitalId;
@@ -121,12 +111,7 @@ export const getDashboardStats = async (req, res, next) => {
   }
 };
 
-/**
- * Get system-wide statistics (for admin users or regional coordinators)
- * GET /dashboard/system-stats
- * 
- * Returns aggregate stats across all hospitals (if user has permission)
- */
+// Get system-wide statistics (for admin users or regional coordinators)
 export const getSystemStats = async (req, res, next) => {
   try {
     // Only allow admin users

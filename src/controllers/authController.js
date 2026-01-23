@@ -37,10 +37,7 @@ async function login(req, res, next) {
   }
 }
 
-/**
- * Refresh access token using a refresh token.
- * Allows clients to get a new access token without re-entering credentials.
- */
+// Refresh access token using a refresh token
 async function refreshToken(req, res, next) {
   try {
     const { refresh_token } = req.body;
@@ -67,10 +64,7 @@ async function refreshToken(req, res, next) {
   }
 }
 
-/**
- * Logout - invalidates the current session.
- * Requires the user to be authenticated.
- */
+// Logout - invalidates the current session
 async function logout(req, res, next) {
   try {
     const { supabaseAnon } = getSupabaseClients();
@@ -88,10 +82,7 @@ async function logout(req, res, next) {
   }
 }
 
-/**
- * Request password reset - sends a reset email to the user.
- * No authentication required.
- */
+// Request password reset - sends a reset email to the user
 async function forgotPassword(req, res, next) {
   try {
     const { email } = req.body;
@@ -122,10 +113,7 @@ async function forgotPassword(req, res, next) {
   }
 }
 
-/**
- * Reset password - sets a new password using the token from the reset email.
- * The user will have a valid session after clicking the reset link.
- */
+// Reset password - sets a new password using the token from the reset email
 async function resetPassword(req, res, next) {
   try {
     const { new_password } = req.body;

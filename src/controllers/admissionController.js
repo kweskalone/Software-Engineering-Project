@@ -18,10 +18,7 @@ async function createAdmission(req, res, next) {
   }
 }
 
-/**
- * List admissions for the user's hospital.
- * Supports pagination and filtering by status.
- */
+// List admissions for the user's hospital
 async function listAdmissions(req, res, next) {
   try {
     const { supabaseService, supabaseAnon } = getSupabaseClients();
@@ -84,9 +81,7 @@ async function listAdmissions(req, res, next) {
   }
 }
 
-/**
- * Get a single admission by ID.
- */
+// Get a single admission by ID
 async function getAdmission(req, res, next) {
   try {
     const admissionId = req.params.id;

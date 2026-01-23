@@ -1,7 +1,4 @@
-/**
- * Validates required environment variables at startup.
- * Fails fast with a clear message if any required variables are missing.
- */
+// Validates required environment variables at startup
 function validateEnv() {
   const required = [
     'SUPABASE_URL',

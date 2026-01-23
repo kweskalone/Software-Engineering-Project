@@ -7,13 +7,7 @@ function parseBearerToken(req) {
   return token;
 }
 
-/**
- * Auth middleware:
- * - Validates Supabase JWT by calling supabase.auth.getUser(token)
- * - Loads the app-level user role from public.users (linked by auth_user_id)
- *
- * Attaches req.auth = { user, role, hospitalId }
- */
+// Auth middleware: validates Supabase JWT and loads user role
 async function requireAuth(req, res, next) {
   try {
     const token = parseBearerToken(req);

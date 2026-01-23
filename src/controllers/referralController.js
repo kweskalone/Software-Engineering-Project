@@ -21,10 +21,7 @@ async function createReferral(req, res, next) {
   }
 }
 
-/**
- * List referrals for the user's hospital (as sender or receiver).
- * Supports pagination and filtering by status.
- */
+// List referrals for the user's hospital (as sender or receiver)
 async function listReferrals(req, res, next) {
   try {
     const { supabaseService, supabaseAnon } = getSupabaseClients();
@@ -98,9 +95,7 @@ async function listReferrals(req, res, next) {
   }
 }
 
-/**
- * Get a single referral by ID.
- */
+// Get a single referral by ID
 async function getReferral(req, res, next) {
   try {
     const referralId = req.params.id;
@@ -148,14 +143,7 @@ async function getReferral(req, res, next) {
   }
 }
 
-/**
- * Accept a referral (receiving hospital).
- * Only the TO hospital can accept.
- * Status: pending → accepted
- * 
- * NEW: When accepting, a bed is reserved temporarily (default 2 hours).
- * This prevents double-booking while the patient is being transferred.
- */
+// Accept a referral (receiving hospital)
 async function acceptReferral(req, res, next) {
   try {
     const referralId = req.params.id;
@@ -239,11 +227,7 @@ async function acceptReferral(req, res, next) {
   }
 }
 
-/**
- * Reject a referral (receiving hospital).
- * Only the TO hospital can reject.
- * Status: pending → rejected
- */
+// Reject a referral (receiving hospital)
 async function rejectReferral(req, res, next) {
   try {
     const referralId = req.params.id;
@@ -312,14 +296,7 @@ async function rejectReferral(req, res, next) {
   }
 }
 
-/**
- * Complete a referral by admitting the patient at the receiving hospital.
- * Only the TO hospital can complete.
- * Status: accepted → completed
- * This also creates an admission at the receiving hospital.
- * 
- * NEW: Completes any active bed reservation and admits the patient.
- */
+// Complete a referral by admitting the patient at the receiving hospital
 async function completeReferral(req, res, next) {
   try {
     const referralId = req.params.id;
@@ -467,13 +444,7 @@ async function completeReferral(req, res, next) {
   }
 }
 
-/**
- * Cancel a referral (sender hospital).
- * Only the FROM hospital can cancel.
- * Status: pending|accepted|rejected → cancelled
- * 
- * NEW: If the referral has an active reservation, it will be released.
- */
+// Cancel a referral (sender hospital)
 async function cancelReferral(req, res, next) {
   try {
     const referralId = req.params.id;

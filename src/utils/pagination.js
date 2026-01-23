@@ -1,17 +1,10 @@
-/**
- * Pagination helper utilities.
- * Provides consistent pagination across all list endpoints.
- */
+// Pagination helper utilities
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
-/**
- * Parse pagination parameters from request query.
- * @param {object} query - Express request query object
- * @returns {{ page: number, limit: number, offset: number }}
- */
+// Parse pagination parameters from request query
 function parsePagination(query) {
   let page = parseInt(query.page, 10) || DEFAULT_PAGE;
   let limit = parseInt(query.limit, 10) || DEFAULT_LIMIT;
@@ -26,11 +19,7 @@ function parsePagination(query) {
   return { page, limit, offset };
 }
 
-/**
- * Build pagination metadata for response.
- * @param {{ page: number, limit: number, totalCount: number }} params
- * @returns {{ page: number, limit: number, total_count: number, total_pages: number, has_next: boolean, has_prev: boolean }}
- */
+// Build pagination metadata for response
 function buildPaginationMeta({ page, limit, totalCount }) {
   const totalPages = Math.ceil(totalCount / limit);
   

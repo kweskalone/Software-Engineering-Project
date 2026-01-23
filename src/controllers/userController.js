@@ -1,8 +1,6 @@
 import { createUserWithProfile, listUsers, getUserById, updateUser, deleteUser } from '../services/userService.js';
 
-/**
- * List all users (admin only)
- */
+// List all users (admin only)
 async function getUsers(req, res, next) {
   try {
     const { page = 1, limit = 20, role, hospital_id } = req.query;
@@ -21,9 +19,7 @@ async function getUsers(req, res, next) {
   }
 }
 
-/**
- * Get a single user by ID (admin only)
- */
+// Get a single user by ID (admin only)
 async function getUser(req, res, next) {
   try {
     const { id } = req.params;
@@ -39,9 +35,7 @@ async function getUser(req, res, next) {
   }
 }
 
-/**
- * Create a new user (admin only)
- */
+// Create a new user (admin only)
 async function createUser(req, res, next) {
   try {
     const { email, password, role, hospital_id, staff_id, first_name, last_name } = req.body;
@@ -63,9 +57,7 @@ async function createUser(req, res, next) {
   }
 }
 
-/**
- * Update a user (admin only)
- */
+// Update a user (admin only)
 async function patchUser(req, res, next) {
   try {
     const { id } = req.params;
@@ -83,9 +75,7 @@ async function patchUser(req, res, next) {
   }
 }
 
-/**
- * Delete a user (admin only)
- */
+// Delete a user (admin only)
 async function removeUser(req, res, next) {
   try {
     const { id } = req.params;

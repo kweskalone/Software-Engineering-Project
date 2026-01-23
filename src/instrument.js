@@ -1,8 +1,4 @@
-/**
- * Sentry instrumentation file for ESM modules.
- * This file should be imported before the app starts using --import flag.
- * Usage: node --import ./src/instrument.js src/server.js
- */
+// Sentry instrumentation file for ESM modules
 import * as Sentry from '@sentry/node';
 
 const dsn = process.env.SENTRY_DSN;

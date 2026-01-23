@@ -5,7 +5,9 @@ const createUserSchema = z.object({
   password: z.string().min(6),
   role: z.enum(['admin', 'doctor', 'nurse']),
   hospital_id: z.string().uuid(),
-  staff_id: z.string().min(2)
+  staff_id: z.string().min(2),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
 });
 
 export { createUserSchema };

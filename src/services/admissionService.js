@@ -16,12 +16,7 @@ function mapRpcErrorToHttp(error) {
   return { statusCode: 500, publicMessage: 'Failed to create admission' };
 }
 
-/**
- * Fully implemented critical business rule endpoint:
- * - Patients cannot be admitted if no beds are available
- * - Admission reduces available bed count (atomically inside DB via RPC)
- * - Only authorized roles can access route (RBAC middleware)
- */
+// Create admission with bed availability check
 async function createAdmission({ actor, wardId, patient }) {
   const {
     full_name,

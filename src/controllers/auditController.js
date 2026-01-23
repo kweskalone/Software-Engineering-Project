@@ -2,17 +2,7 @@ import { supabase } from '../config/supabaseClient.js';
 import { AppError } from '../middleware/errorHandlers.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 
-/**
- * Get audit logs (admin only)
- * GET /audit-logs
- * 
- * Query params:
- * - page, limit: pagination
- * - action: filter by action type (e.g., 'admission.create', 'referral.accept')
- * - table_name: filter by table (admissions, referrals, discharges, patients, users)
- * - user_id: filter by specific user who performed action
- * - start_date, end_date: date range filter
- */
+// Get audit logs (admin only)
 export const listAuditLogs = async (req, res, next) => {
   try {
     const { page, limit, offset } = parsePagination(req.query);
@@ -70,10 +60,7 @@ export const listAuditLogs = async (req, res, next) => {
   }
 };
 
-/**
- * Get a specific audit log entry
- * GET /audit-logs/:id
- */
+// Get a specific audit log entry
 export const getAuditLog = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -106,12 +93,7 @@ export const getAuditLog = async (req, res, next) => {
   }
 };
 
-/**
- * Get audit log summary/statistics
- * GET /audit-logs/summary
- * 
- * Returns counts by action type for reporting
- */
+// Get audit log summary/statistics
 export const getAuditSummary = async (req, res, next) => {
   try {
     const { start_date, end_date } = req.query;
