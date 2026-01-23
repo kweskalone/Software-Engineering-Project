@@ -48,6 +48,7 @@ async function requireAuth(req, res, next) {
     req.auth = {
       token,
       user: userData.user,
+      userId: profile.id,
       role: profile.role,
       hospitalId: profile.hospital_id,
       staffId: profile.staff_id

@@ -6,7 +6,7 @@ import app from './app.js';
 // Validate environment variables before starting
 validateEnv();
 
-const port = Number(process.env.PORT || 3000);
+const port = Number(process.env.PORT || 5000);
 
 const server = app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
